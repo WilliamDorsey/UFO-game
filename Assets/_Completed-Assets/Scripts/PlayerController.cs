@@ -7,22 +7,28 @@ public class PlayerController : MonoBehaviour
 {
     public float speed;
 
-    public Text countText;
-
-    public Text winText;
+    public Text score;
+    public Text lives;
+    public Text winLoseText;
 
     private int count;
+    private int totalCount;
+    private int lifeCount;
 
     private Rigidbody2D rb2d;
+    private GameObject[] enemies;
 
     private void Start()
     {
         rb2d = GetComponent<Rigidbody2D> ();
-        count = 0;
-        winText.text = "";
-        SetCountText ();
+        count = 0;                            //Displayed score
+        totalCount = 0;                       //Pickup count for determining when next level starts
+        lifeCount = 3;                        //Lives
+        winLoseText.text = "";
+        SetScore ();
     }
 
+    //Quit Application
     void Update()
     {
         if (Input.GetKey("escape"))
@@ -31,6 +37,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    //Player Movement
     void FixedUpdate()
     {
         float moveHorizontal = Input.GetAxis("Horizontal");
@@ -39,23 +46,62 @@ public class PlayerController : MonoBehaviour
         rb2d.AddForce(movement * speed);
     }
 
+    //When player collides with an object
     void OnTriggerEnter2D(Collider2D other)
     {
+        //Pick up pickup
         if (other.gameObject.CompareTag("PickUp"))
-            {
+        {
             other.gameObject.SetActive(false);
             count++;
-            SetCountText ();
+            totalCount++;
         }
+
+        //Player hits a bad pickup
+        if (other.gameObject.CompareTag("BadPickup"))
+        {
+            other.gameObject.SetActive(false);
+            lifeCount--;
+            count--;
+        }
+
+        SetScore();
 
     }
 
-    void SetCountText()
+    //Display current score
+    private void SetScore()
     {
-        countText.text = "Count: " + count.ToString();
-        if (count >= 14)
+        score.text = ($"Score: {count}");
+        lives.text = ($"Lives: {lifeCount}");
+
+        //Teleports player after all pickups on level 1
+        if (totalCount == 12)
         {
-            winText.text = "William declares you victorious!";
+            transform.position = new Vector3(0, -60, 0);
+            rb2d.velocity = Vector3.zero;
+            totalCount++;
+        }
+
+        //Win state
+        if (totalCount >= 22)
+        {
+            winLoseText.text = "The laser is charged up, William. We win!";
+
+            //Destroy all bad pickups
+            enemies = GameObject.FindGameObjectsWithTag("BadPickup");
+            for (var i = 0; i < enemies.Length; i++)
+                Destroy(enemies[i]);
+        }
+
+        //Death state
+        if (lifeCount <= 0)
+        {
+            winLoseText.fontStyle = FontStyle.Bold;
+            winLoseText.color = Color.red;
+            winLoseText.text = "You Lose";
+            rb2d.velocity = Vector3.zero;
+            rb2d.isKinematic = true;
         }
     }
 }
